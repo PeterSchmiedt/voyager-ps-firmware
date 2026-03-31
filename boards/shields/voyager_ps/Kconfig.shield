@@ -1,0 +1,5 @@
+config SHIELD_VOYAGER_PS_LEFT
+    def_bool $(shields_list_contains,voyager_ps_left)
+
+config SHIELD_VOYAGER_PS_RIGHT
+    def_bool $(shields_list_contains,voyager_ps_right)
