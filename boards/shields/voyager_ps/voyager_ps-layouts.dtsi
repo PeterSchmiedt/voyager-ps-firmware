@@ -69,13 +69,15 @@
             , <&key_physical_attrs 100 100 1300  341       0     0     0>
 
             // Left hand - Row 4 (thumb cluster)
-            , <&key_physical_attrs 100 100  400  451       0     0     0>    // thumb index col
-            , <&key_physical_attrs 100 100  500  468    3000   550   518>    // thumb inner col (rotated 30deg)
-            , <&key_physical_attrs 100 100  580  420    3000   550   518>    // thumb extra col (rotated 30deg)
+            , <&key_physical_attrs 100 100  400  451       0     0     0>    // thumb_left (P14)
+            , <&key_physical_attrs 100 100  500  468    3000   550   518>    // thumb_middle (P15, rotated 30deg)
+            , <&key_physical_attrs 100 100  580  420    3000   550   518>    // thumb_right (P18, rotated 30deg)
+            , <&key_physical_attrs 100 100  580  320    3000   550   518>    // thumb_top (P20, rotated 30deg)
             // Right hand - Row 4 (thumb cluster)
-            , <&key_physical_attrs 100 100  720  420  33000   750   518>    // thumb extra col (rotated -30deg)
-            , <&key_physical_attrs 100 100  800  468  33000   750   518>    // thumb inner col (rotated -30deg)
-            , <&key_physical_attrs 100 100  900  451       0     0     0>    // thumb index col
+            , <&key_physical_attrs 100 100  720  320  33000   750   518>    // thumb_top (P20, rotated -30deg)
+            , <&key_physical_attrs 100 100  720  420  33000   750   518>    // thumb_right (P18, rotated -30deg)
+            , <&key_physical_attrs 100 100  800  468  33000   750   518>    // thumb_middle (P15, rotated -30deg)
+            , <&key_physical_attrs 100 100  900  451       0     0     0>    // thumb_left (P14)
             ;
     };
 };
