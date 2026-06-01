@@ -68,6 +68,9 @@
             , <&key_physical_attrs 100 100 1200  341       0     0     0>
             , <&key_physical_attrs 100 100 1300  341       0     0     0>
 
+            // Left encoder push-button (above outer column, shares P21 row + P9 col)
+            , <&key_physical_attrs 100 100  600  -59       0     0     0>    // encoder button (left)
+
             // Left hand - Row 4 (thumb cluster)
             , <&key_physical_attrs 100 100  400  451       0     0     0>    // thumb_left (P14)
             , <&key_physical_attrs 100 100  500  468    3000   550   518>    // thumb_middle (P15, rotated 30deg)
@@ -78,6 +81,9 @@
             , <&key_physical_attrs 100 100  720  420  33000   750   518>    // thumb_right (P18, rotated -30deg)
             , <&key_physical_attrs 100 100  800  468  33000   750   518>    // thumb_middle (P15, rotated -30deg)
             , <&key_physical_attrs 100 100  900  451       0     0     0>    // thumb_left (P14)
+
+            // Right encoder push-button (mirror of left)
+            , <&key_physical_attrs 100 100  700  -59       0     0     0>    // encoder button (right)
             ;
     };
 };
