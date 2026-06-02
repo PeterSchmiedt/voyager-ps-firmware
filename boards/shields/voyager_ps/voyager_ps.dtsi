@@ -12,8 +12,11 @@
         diode-direction = "col2row";
         wakeup-source;
 
+        // Row "num" was originally on &pro_micro 0 (= P0.08). Hardware bodge
+        // swaps D0 and D16 so the LED chain can take P0.08 (high-frequency
+        // capable). Row "num" moves to &pro_micro 16 (= P0.10).
         row-gpios
-            = <&pro_micro 0 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+            = <&pro_micro 16 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
             , <&pro_micro 4 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
             , <&pro_micro 5 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
             , <&pro_micro 6 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>

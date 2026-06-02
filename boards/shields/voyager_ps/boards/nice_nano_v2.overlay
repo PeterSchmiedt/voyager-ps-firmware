@@ -4,11 +4,12 @@
  * (SPI/I2S) that the shield cannot know about. This overlay is conditionally
  * loaded when the voyager_ps shield is built for nice_nano_v2.
  *
- * Caveat: the LED data line on this PCB is routed to P0.10 (D16), which is
- * a low-frequency I/O pin on the nRF52840. ZMK's hardware-issues docs flag
- * this as a possible source of BLE antenna interference. Functionally it
- * still works for WS2812 SPI at 4 MHz — but expect somewhat flakier
- * Bluetooth range once the strip is active.
+ * LED data line is bodged from MCU D0 (P0.08) — high-frequency capable —
+ * to LED #1 DIN. The original PCB had LED data on D16 (P0.10) which is an
+ * NFC pin marked "low frequency I/O only" in the nRF52840 datasheet and
+ * cannot reliably produce WS2812 timing. Cross-connected with row "num"
+ * which originally lived on D0 and is now reassigned to D16 (matrix scan
+ * is sub-kHz so the low-frequency limit doesn't bite).
  */
 
 #include <dt-bindings/led/led.h>
@@ -16,13 +17,13 @@
 &pinctrl {
     spi3_default: spi3_default {
         group1 {
-            psels = <NRF_PSEL(SPIM_MOSI, 0, 10)>;
+            psels = <NRF_PSEL(SPIM_MOSI, 0, 8)>;
         };
     };
 
     spi3_sleep: spi3_sleep {
         group1 {
-            psels = <NRF_PSEL(SPIM_MOSI, 0, 10)>;
+            psels = <NRF_PSEL(SPIM_MOSI, 0, 8)>;
             low-power-enable;
         };
     };
