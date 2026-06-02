@@ -1,0 +1,59 @@
+/*
+ * Per ZMK docs: RGB underglow is configured against a board (not a shield),
+ * because the LED-strip driver depends on hardware-specific interfaces
+ * (SPI/I2S) that the shield cannot know about. This overlay is conditionally
+ * loaded when the voyager_ps shield is built for nice_nano_v2.
+ *
+ * Caveat: the LED data line on this PCB is routed to P0.10 (D16), which is
+ * a low-frequency I/O pin on the nRF52840. ZMK's hardware-issues docs flag
+ * this as a possible source of BLE antenna interference. Functionally it
+ * still works for WS2812 SPI at 4 MHz — but expect somewhat flakier
+ * Bluetooth range once the strip is active.
+ */
+
+#include <dt-bindings/led/led.h>
+
+&pinctrl {
+    spi3_default: spi3_default {
+        group1 {
+            psels = <NRF_PSEL(SPIM_MOSI, 0, 10)>;
+        };
+    };
+
+    spi3_sleep: spi3_sleep {
+        group1 {
+            psels = <NRF_PSEL(SPIM_MOSI, 0, 10)>;
+            low-power-enable;
+        };
+    };
+};
+
+&spi3 {
+    compatible = "nordic,nrf-spim";
+    status = "okay";
+
+    pinctrl-0 = <&spi3_default>;
+    pinctrl-1 = <&spi3_sleep>;
+    pinctrl-names = "default", "sleep";
+
+    led_strip: ws2812@0 {
+        compatible = "worldsemi,ws2812-spi";
+
+        /* SPI */
+        reg = <0>;
+        spi-max-frequency = <4000000>;
+
+        /* WS2812 */
+        chain-length = <28>;
+        spi-one-frame = <0x70>;
+        spi-zero-frame = <0x40>;
+
+        color-mapping = <LED_COLOR_ID_GREEN LED_COLOR_ID_RED LED_COLOR_ID_BLUE>;
+    };
+};
+
+/ {
+    chosen {
+        zmk,underglow = &led_strip;
+    };
+};
