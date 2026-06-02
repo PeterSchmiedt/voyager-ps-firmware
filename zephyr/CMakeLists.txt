@@ -35,15 +35,16 @@ if(EXISTS "${_zmk_rgb}")
             _zmk_rgb_patched "${_zmk_rgb_patched}"
         )
 
-        # Also add save_state at the END of zmk_rgb_underglow_init so the boot
-        # state gets persisted on FIRST boot too — without this, NVS stays
-        # empty until user triggers any save, and the size-check guard in
-        # rgb_settings_set could reject any leftover wrong-size data forever.
-        string(REPLACE
-            "    if (state.on) {\n        k_timer_start(&underglow_tick, K_NO_WAIT, K_MSEC(50));\n    }\n\n    return 0;\n}\n\nint zmk_rgb_underglow_save_state"
-            "    if (state.on) {\n        k_timer_start(&underglow_tick, K_NO_WAIT, K_MSEC(50));\n    }\n\n    zmk_rgb_underglow_save_state();\n    return 0;\n}\n\nint zmk_rgb_underglow_save_state"
-            _zmk_rgb_patched "${_zmk_rgb_patched}"
-        )
+        # REMOVED: previously also patched init to call save_state at the end.
+        # That was a bug — init runs BEFORE main's settings_load(), so it was
+        # overwriting NVS with defaults on every boot, clobbering the user's
+        # saved colour. Boot order is:
+        #   1. SYS_INIT (APPLICATION pri): init() runs, state = defaults (10%)
+        #   2. init save fires → settings_save_one writes 10% to NVS
+        #   3. main(): settings_load() reads NVS → gets the 10% we just wrote
+        # So saved values from previous sessions get blown away on every boot.
+        # If size-mismatched stale NVS is a concern, fix it with settings_reset.uf2,
+        # not by force-overwriting on every init.
         file(WRITE "${_zmk_rgb}" "${_zmk_rgb_patched}")
         message(STATUS "[voyager-ps] Patched ${_zmk_rgb} — set_hsb persists, init saves boot state")
 
