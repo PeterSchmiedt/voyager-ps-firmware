@@ -25,6 +25,16 @@ if(EXISTS "${_zmk_rgb}")
             "state.color = color;\n\n    return zmk_rgb_underglow_save_state();"
             _zmk_rgb_patched "${_zmk_rgb_src}"
         )
+        # Make save_state synchronous (bypass the debounced workqueue). Replaces
+        # the body of zmk_rgb_underglow_save_state to call settings_save_one
+        # directly. Removes any possibility that the user power-cycles before
+        # the debounced work runs, or that the work fires with stale state.
+        string(REPLACE
+            "int zmk_rgb_underglow_save_state(void) {\n#if IS_ENABLED(CONFIG_SETTINGS)\n    int ret = k_work_reschedule(&underglow_save_work, K_MSEC(CONFIG_ZMK_SETTINGS_SAVE_DEBOUNCE));\n    return MIN(ret, 0);\n#else\n    return 0;\n#endif\n}"
+            "int zmk_rgb_underglow_save_state(void) {\n#if IS_ENABLED(CONFIG_SETTINGS)\n    return settings_save_one(\"rgb/underglow/state\", &state, sizeof(state));\n#else\n    return 0;\n#endif\n}"
+            _zmk_rgb_patched "${_zmk_rgb_patched}"
+        )
+
         # Also add save_state at the END of zmk_rgb_underglow_init so the boot
         # state gets persisted on FIRST boot too — without this, NVS stays
         # empty until user triggers any save, and the size-check guard in
@@ -37,12 +47,17 @@ if(EXISTS "${_zmk_rgb}")
         file(WRITE "${_zmk_rgb}" "${_zmk_rgb_patched}")
         message(STATUS "[voyager-ps] Patched ${_zmk_rgb} — set_hsb persists, init saves boot state")
 
-        # Show the patched set_hsb to verify the edit took effect.
+        # Show both patched functions to verify edits took effect.
         execute_process(
-            COMMAND grep -n -A2 -B1 "state\\.color = color" "${_zmk_rgb}"
-            OUTPUT_VARIABLE _verify_out
+            COMMAND grep -n -A3 -B1 "state\\.color = color" "${_zmk_rgb}"
+            OUTPUT_VARIABLE _verify_set_hsb
         )
-        message(STATUS "[voyager-ps] set_hsb after patch:\n${_verify_out}")
+        execute_process(
+            COMMAND grep -n -A3 "int zmk_rgb_underglow_save_state(void)" "${_zmk_rgb}"
+            OUTPUT_VARIABLE _verify_save
+        )
+        message(STATUS "[voyager-ps] Patched set_hsb:\n${_verify_set_hsb}")
+        message(STATUS "[voyager-ps] Patched save_state:\n${_verify_save}")
     else()
         message(STATUS "[voyager-ps] ${_zmk_rgb} already patched")
     endif()
