@@ -65,40 +65,18 @@
     };
 };
 
-/* RGB underglow over SPI3 MOSI on P0.08 (D0) — bodged from the original
- * D16 (P0.10) NFC pin. Kept in the shared shield dtsi (not boards/) to
- * guarantee inclusion in multi-shield builds (e.g. with nice_view_adapter
- * + nice_view) where shield-board overlay discovery has been silently
- * skipping this configuration. */
-&pinctrl {
-    spi3_default: spi3_default {
-        group1 {
-            psels = <NRF_PSEL(SPIM_MOSI, 0, 8)>;
-        };
-    };
-
-    spi3_sleep: spi3_sleep {
-        group1 {
-            psels = <NRF_PSEL(SPIM_MOSI, 0, 8)>;
-            low-power-enable;
-        };
-    };
-};
-
-&spi3 {
-    compatible = "nordic,nrf-spim";
-    status = "okay";
-    pinctrl-0 = <&spi3_default>;
-    pinctrl-1 = <&spi3_sleep>;
-    pinctrl-names = "default", "sleep";
-
-    led_strip: ws2812@0 {
-        compatible = "worldsemi,ws2812-spi";
-        reg = <0>;
-        spi-max-frequency = <4000000>;
+/* RGB underglow via GPIO bit-bang on D0 (P0.08).
+ *
+ * Switched from SPIM3 (worldsemi,ws2812-spi) to direct GPIO bit-bang
+ * (worldsemi,ws2812-gpio) after the SPIM3 path went silent on the
+ * scope despite valid pinctrl and chosen zmk,underglow setup. The
+ * GPIO driver writes the WS2812 protocol with nRF inline-asm using
+ * GPIO OUTSET/OUTCLR registers — bypasses SPI3 init entirely. */
+/ {
+    led_strip: ws2812 {
+        compatible = "worldsemi,ws2812-gpio";
+        gpios = <&pro_micro 0 GPIO_ACTIVE_HIGH>;
         chain-length = <28>;
-        spi-one-frame = <0x70>;
-        spi-zero-frame = <0x40>;
         color-mapping = <LED_COLOR_ID_GREEN LED_COLOR_ID_RED LED_COLOR_ID_BLUE>;
     };
 };
