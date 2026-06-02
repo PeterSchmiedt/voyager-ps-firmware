@@ -22,7 +22,7 @@
  * -Wl,--wrap=zmk_rgb_underglow_set_hsb to the final link.
  */
 
-#include <zephyr/types.h>
+#include <zephyr/kernel.h>
 #include <zmk/rgb_underglow.h>
 
 extern int __real_zmk_rgb_underglow_set_hsb(struct zmk_led_hsb color);
