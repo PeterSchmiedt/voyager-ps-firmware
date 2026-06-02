@@ -1,0 +1,3 @@
+zephyr_library_named(voyager_ps_rgb_save)
+zephyr_library_sources_ifdef(CONFIG_ZMK_RGB_UNDERGLOW ${CMAKE_CURRENT_SOURCE_DIR}/rgb_save_on_press.c)
+zephyr_library_include_directories(${CMAKE_SOURCE_DIR}/include)
