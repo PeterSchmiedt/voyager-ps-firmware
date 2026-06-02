@@ -9,6 +9,20 @@
 #define ADJUST 3
 
 / {
+    /*
+     * Encoder rotation binding for RGB brightness. The stock &inc_dec_kp is
+     * hard-wired to &kp behaviors; we need a sibling instance that dispatches
+     * to &rgb_ug so each rotation tick fires RGB_BRI_CMD or RGB_BRD_CMD.
+     * RGB_BRI_CMD = 7 / RGB_BRD_CMD = 8 (from dt-bindings/zmk/rgb.h).
+     */
+    behaviors {
+        inc_dec_rgb: encoder_rgb_brt {
+            compatible = "zmk,behavior-sensor-rotate-var";
+            #sensor-binding-cells = <2>;
+            bindings = <&rgb_ug>, <&rgb_ug>;
+        };
+    };
+
     keymap {
         compatible = "zmk,keymap";
 
@@ -25,7 +39,10 @@
                 &rgb_ug RGB_TOG        &kp LGUI &mo LOWER &kp SPACE &kp ESC      &kp DEL  &kp RET   &mo RAISE  &kp RALT &rgb_ug RGB_TOG
             >;
 
-            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp C_VOL_UP C_VOL_DN>;
+            // Encoder rotation: clockwise = brightness up, ccw = brightness down.
+            // Pass *just* the CMD value (not RGB_BRI/RGB_BRD macros) — sensor-rotate-var
+            // only consumes 1 cell per direction, which becomes the rgb_ug behavior's param1.
+            sensor-bindings = <&inc_dec_rgb RGB_BRI_CMD RGB_BRD_CMD &inc_dec_rgb RGB_BRI_CMD RGB_BRD_CMD>;
         };
 
         lower_layer {
