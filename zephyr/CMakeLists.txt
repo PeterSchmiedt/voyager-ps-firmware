@@ -66,8 +66,11 @@ else()
     message(FATAL_ERROR "[voyager-ps] Could not find ${_zmk_rgb} to patch!")
 endif()
 
-# Also keep the position_state_changed listener as a safety net.
-# Source must be added to the main zephyr library so the linker
-# pulls in the section-only-referenced subscription symbol.
-zephyr_sources_ifdef(CONFIG_ZMK_RGB_UNDERGLOW rgb_save_on_press.c)
-zephyr_include_directories(${CMAKE_SOURCE_DIR}/include)
+# Listener removed: with the in-source patches above, set_hsb itself
+# triggers save_state synchronously. A separate listener was firing on
+# every position_state_changed event — including any phantom matrix
+# event during the early boot window (between rgb_underglow_init's
+# state=defaults assignment at SYS_INIT and main()'s settings_load).
+# A boot-window phantom event would synchronously write defaults to
+# NVS, clobbering the saved value just before the load tried to read it.
+# Removing the listener eliminates that race.
