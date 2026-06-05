@@ -2,13 +2,17 @@
 include:
   - board: nice_nano_v2
     shield: voyager_ps_left
+    snippet: zmk-usb-logging
   - board: nice_nano_v2
     shield: voyager_ps_right
+    snippet: zmk-usb-logging
   - board: nice_nano_v2
     shield: voyager_ps_left nice_view_adapter nice_view
+    snippet: zmk-usb-logging
     artifact-name: voyager_ps_left_niceview
   - board: nice_nano_v2
     shield: voyager_ps_right nice_view_adapter nice_view
+    snippet: zmk-usb-logging
     artifact-name: voyager_ps_right_niceview
   - board: nice_nano_v2
     shield: settings_reset
