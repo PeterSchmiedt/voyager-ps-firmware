@@ -1,16 +1,17 @@
-# RGB-underglow persistence debug instrumentation.
+# RGB-underglow persistence fix + debug instrumentation.
 #
-# At CMake configure time, splice LOG_INF statements into ZMK's stock
-# rgb_underglow.c and behavior_rgb_underglow.c so we can observe:
-#   - what NVS hands back to the settings_set callback at boot
-#   - what state init() ends with
-#   - which code path encoder rotations actually traverse (set_hsb vs
-#     change_brt) and whether either calls save_state
-#   - whether the debounced save_work fires and what settings_save_one
-#     returns
-#
-# No behavioral changes. All inserted log lines are tagged "[VPS]" so
-# they can be greppped from Zephyr's normal log stream.
+# At CMake configure time, edits ZMK's stock rgb_underglow.c and
+# behavior_rgb_underglow.c to:
+#   1. Make zmk_rgb_underglow_set_hsb call save_state — this is the
+#      actual fix for the persistence bug. Stock ZMK rewrites every
+#      RGB_BRI/RGB_BRD keymap binding to RGB_COLOR_HSB_CMD via
+#      binding_convert_central_state_dependent_params, which dispatches
+#      to set_hsb. Stock set_hsb returns 0 without persisting, so all
+#      encoder-driven brightness changes are lost on reboot. (Confirmed
+#      by USB CDC trace before this patch was applied.)
+#   2. Inject [VPS]-tagged LOG_INF statements at every relevant decision
+#      point so the encoder → behavior → underglow → NVS path stays
+#      visible in future captures.
 #
 # Each apply_log_patch() call is idempotent: it bails if the marker text
 # is already present. The ZMK source path differs between local
@@ -193,8 +194,12 @@ apply_log_patch("toggle() entry"
 }
 ]==])
 
-# --- set_hsb: KEY SUSPECT — stock implementation does NOT call save_state
-apply_log_patch("set_hsb (suspect)"
+# --- set_hsb: ROOT CAUSE — stock implementation skips save_state.
+# This patch combines the diagnostic logging with the actual fix: routing
+# through save_state so encoder-driven brightness changes (which all funnel
+# through set_hsb via behavior_rgb_underglow.c's relative-to-absolute
+# conversion of RGB_BRI/RGB_BRD) finally persist to NVS.
+apply_log_patch("set_hsb (logging + persistence fix)"
     "${_zmk_rgb}"
 [==[int zmk_rgb_underglow_set_hsb(struct zmk_led_hsb color) {
     if (color.h > HUE_MAX || color.s > SAT_MAX || color.b > BRT_MAX) {
@@ -207,7 +212,7 @@ apply_log_patch("set_hsb (suspect)"
 }
 ]==]
 [==[int zmk_rgb_underglow_set_hsb(struct zmk_led_hsb color) {
-    LOG_INF("[VPS] set_hsb() called: incoming h=%u s=%u b=%u (NOTE: stock path does NOT call save_state)",
+    LOG_INF("[VPS] set_hsb() called: incoming h=%u s=%u b=%u (will call save_state)",
             color.h, color.s, color.b);
     if (color.h > HUE_MAX || color.s > SAT_MAX || color.b > BRT_MAX) {
         LOG_WRN("[VPS] set_hsb() rejected: bounds violation");
@@ -216,7 +221,34 @@ apply_log_patch("set_hsb (suspect)"
 
     state.color = color;
 
-    return 0;
+    return zmk_rgb_underglow_save_state();
+}
+]==])
+
+# --- calc_brt: log what state.color.b the convert/change paths read.
+# Helps diagnose the "brightness stuck at low value" report — if calc_brt
+# reads a stale state.color.b (e.g. due to split sync timing) we'll see it.
+apply_log_patch("calc_brt logging"
+    "${_zmk_rgb}"
+[==[struct zmk_led_hsb zmk_rgb_underglow_calc_brt(int direction) {
+    struct zmk_led_hsb color = state.color;
+
+    int b = color.b + (direction * CONFIG_ZMK_RGB_UNDERGLOW_BRT_STEP);
+    color.b = CLAMP(b, 0, BRT_MAX);
+
+    return color;
+}
+]==]
+[==[struct zmk_led_hsb zmk_rgb_underglow_calc_brt(int direction) {
+    struct zmk_led_hsb color = state.color;
+
+    int b = color.b + (direction * CONFIG_ZMK_RGB_UNDERGLOW_BRT_STEP);
+    color.b = CLAMP(b, 0, BRT_MAX);
+
+    LOG_INF("[VPS] calc_brt: dir=%+d read state.b=%u step=%d -> b=%u",
+            direction, state.color.b, CONFIG_ZMK_RGB_UNDERGLOW_BRT_STEP, color.b);
+
+    return color;
 }
 ]==])
 
@@ -286,4 +318,23 @@ apply_log_patch("behavior pressed"
     LOG_INF("[VPS] rgb_ug pressed: param1=%d param2=0x%08x",
             binding->param1, binding->param2);
     switch (binding->param1) {
+]==])
+
+# --- binding_released: per encoder tick we see TWO convert calls — one
+# from press and one from release. The release-side convert is a "preview"
+# that reads the post-press state.color.b but discards its result. Logging
+# release lets us pair each convert with its actual press/release origin.
+apply_log_patch("behavior released"
+    "${_zmk_beh}"
+[==[static int on_keymap_binding_released(struct zmk_behavior_binding *binding,
+                                      struct zmk_behavior_binding_event event) {
+    return ZMK_BEHAVIOR_OPAQUE;
+}
+]==]
+[==[static int on_keymap_binding_released(struct zmk_behavior_binding *binding,
+                                      struct zmk_behavior_binding_event event) {
+    LOG_INF("[VPS] rgb_ug released: param1=%d param2=0x%08x",
+            binding->param1, binding->param2);
+    return ZMK_BEHAVIOR_OPAQUE;
+}
 ]==])

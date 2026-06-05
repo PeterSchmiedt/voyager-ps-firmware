@@ -12,8 +12,11 @@
     /*
      * Encoder rotation = RGB brightness. Stock &inc_dec_kp is bound to &kp;
      * this sibling is bound to &rgb_ug so each rotation tick fires
-     * RGB_BRI_CMD or RGB_BRD_CMD — both go through change_brt() which already
-     * calls save_state() in stock ZMK, so persistence works natively.
+     * RGB_BRI_CMD or RGB_BRD_CMD. NOTE: stock ZMK rewrites BRI/BRD via
+     * binding_convert_central_state_dependent_params into RGB_COLOR_HSB_CMD,
+     * which dispatches to set_hsb — NOT change_brt. Stock set_hsb does not
+     * persist, so firmware/zephyr/CMakeLists.txt patches it to call
+     * save_state. Once that patch is in, persistence works.
      */
     behaviors {
         inc_dec_rgb: encoder_rgb_brt {
