@@ -199,6 +199,18 @@ apply_log_patch("toggle() entry"
 # through save_state so encoder-driven brightness changes (which all funnel
 # through set_hsb via behavior_rgb_underglow.c's relative-to-absolute
 # conversion of RGB_BRI/RGB_BRD) finally persist to NVS.
+#
+# CAUTION re: caching. The ZMK CI workflow caches ${base_dir}/zmk/ keyed
+# on west.yml + build.yaml. When those don't change, cached ZMK source
+# from a prior build is restored *with our prior patches still baked in*.
+# That means apply_log_patch's anchor (stock function body) won't match
+# on subsequent runs, so any change to the replacement text would silently
+# fail. To stay robust we do this in two passes:
+#   Pass 1: apply_log_patch handles the cold-start case (stock ZMK source,
+#           e.g. first CI build or after cache key invalidation).
+#   Pass 2: targeted string(REPLACE) migrates any prior-patched form to
+#           the latest form. Both replacements are idempotent — they
+#           no-op when the target text is already in place.
 apply_log_patch("set_hsb (logging + persistence fix)"
     "${_zmk_rgb}"
 [==[int zmk_rgb_underglow_set_hsb(struct zmk_led_hsb color) {
@@ -224,6 +236,36 @@ apply_log_patch("set_hsb (logging + persistence fix)"
     return zmk_rgb_underglow_save_state();
 }
 ]==])
+
+# set_hsb pass 2: migrate prior-patched cached source to the latest form.
+# The `state.color = color;` + `return 0;` pattern is unique to set_hsb
+# (sibling functions use `state.color = zmk_rgb_underglow_calc_*()`), so
+# this REPLACE is safe to run unconditionally. Same for the log message
+# normalization: only set_hsb emits that LOG_INF string.
+if(EXISTS "${_zmk_rgb}")
+    file(READ "${_zmk_rgb}" _vps_content)
+    set(_vps_orig "${_vps_content}")
+    string(REPLACE
+        "(NOTE: stock path does NOT call save_state)"
+        "(will call save_state)"
+        _vps_content "${_vps_content}")
+    string(REPLACE
+"    state.color = color;
+
+    return 0;
+}"
+"    state.color = color;
+
+    return zmk_rgb_underglow_save_state();
+}"
+        _vps_content "${_vps_content}")
+    if(NOT _vps_content STREQUAL _vps_orig)
+        file(WRITE "${_zmk_rgb}" "${_vps_content}")
+        message(STATUS "[VPS][LOGGING] set_hsb pass 2: migrated cached patch to latest form")
+    else()
+        message(STATUS "[VPS][LOGGING] set_hsb pass 2: already in latest form (no-op)")
+    endif()
+endif()
 
 # --- calc_brt: log what state.color.b the convert/change paths read.
 # Helps diagnose the "brightness stuck at low value" report — if calc_brt
