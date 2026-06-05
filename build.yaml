@@ -1,4 +1,9 @@
 ---
+# Cache-buster: ZMK CI caches ${base_dir}/zmk keyed on hashFiles(west.yml,
+# build.yaml). When this file's content hash changes, the cache is missed
+# and a fresh ZMK checkout is fetched — needed when zephyr/CMakeLists.txt
+# patches change shape so prior patched source doesn't persist.
+# bump: 2026-06-06 trim hot-path logging, switch EC11 to OWN_THREAD
 include:
   - board: nice_nano_v2
     shield: voyager_ps_left
