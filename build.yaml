@@ -1,4 +1,9 @@
 ---
+# CI caches the west-managed ZMK checkout keyed on hashFiles('**/west.yml',
+# '**/build.yaml'), so editing zephyr/CMakeLists.txt alone reuses a stale tree.
+# Bump this marker whenever the configure-time patch in that file changes, to
+# force a fresh unpatched fetch and keep the patch deterministic.
+# zmk-source-cache: 2026-07-28 (set_hsb HSB persistence patch)
 include:
   - board: nice_nano//zmk
     shield: voyager_ps_left

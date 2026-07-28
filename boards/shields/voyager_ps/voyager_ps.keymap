@@ -10,15 +10,16 @@
 
 / {
     /*
-     * Encoder rotation = RGB brightness. Stock &inc_dec_kp is bound to &kp;
-     * this sibling is bound to &rgb_ug so each rotation tick fires
-     * RGB_BRI_CMD or RGB_BRD_CMD. ZMK's behavior dispatcher converts
-     * these into RGB_COLOR_HSB_CMD before invoking the underglow handler;
-     * upstream main's set_hsb persists to NVS, so brightness changes
-     * survive reboot natively.
+     * RGB stepping for the ADJ-layer knobs. Stock &inc_dec_kp is bound to &kp;
+     * this sibling is bound to &rgb_ug so each rotation tick fires an
+     * RGB_*_CMD. Note that ZMK's behavior dispatcher rewrites RGB_BRI/RGB_BRD/
+     * RGB_HUI/RGB_HUD into RGB_COLOR_HSB_CMD, which lands in set_hsb() —
+     * upstream that path is RAM-only, so persistence depends on the
+     * configure-time patch in firmware/zephyr/CMakeLists.txt. Without it,
+     * brightness and hue reset on every boot.
      */
     behaviors {
-        inc_dec_rgb: encoder_rgb_brt {
+        inc_dec_rgb: encoder_rgb {
             compatible = "zmk,behavior-sensor-rotate-var";
             #sensor-binding-cells = <2>;
             bindings = <&rgb_ug>, <&rgb_ug>;
@@ -51,21 +52,38 @@
         };
     };
 
+    /*
+     * Encoders, by layer. Both knobs used to be bound identically on every
+     * layer, so two knobs did one job. Now each side has its own role, and the
+     * RGB controls moved to ADJ where the rest of them already live.
+     *
+     *   layer | left knob            | right knob
+     *   ------+----------------------+-------------------------
+     *   BASE  | volume up/down       | cursor right/left
+     *   NAV   | page down/up         | cursor down/up
+     *   SYM   | next/prev track      | screen brightness
+     *   ADJ   | RGB brightness       | RGB hue
+     *
+     * Push-buttons: left = mute (pairs with the volume knob), right = Delete
+     * (which is where Delete went when Backspace took its thumb key). On ADJ
+     * both buttons are RGB on/off.
+     *
+     * Convention: clockwise is always the "more / forward" direction.
+     */
+
     keymap {
         compatible = "zmk,keymap";
 
         default_layer {
             bindings = <
-                &kp ESC         &kp N1      &kp N2  &kp N3    &kp N4    &kp N5        &kp N6   &kp N7    &kp N8     &kp N9   &kp N0         &kp MINUS
-                &kp TAB         &kp Q       &kp W   &kp E     &kp R     &kp T         &kp Y    &kp U     &kp I      &kp O    &kp P          &kp BSLH
-                &mtb LSHFT BSPC &kp A       &kp S   &kp D     &kp F     &kp G         &kp H    &kp J     &kp K      &kp L    &kp SEMI       &mtb RSHFT SQT
-                &kp LCTRL       &mtb LALT Z &kp X   &kp C     &kp V     &kp B         &kp N    &kp M     &kp COMMA  &kp DOT  &mtb RALT FSLH &kp RCTRL
-                &rgb_ug RGB_TOG        &kp LGUI &mo NAV &kp SPACE &kp ESC      &kp DEL  &kp RET   &mo SYM    &caps_word &rgb_ug RGB_TOG
+                &kp ESC         &kp N1      &kp N2  &kp N3    &kp N4   &kp N5        &kp N6    &kp N7  &kp N8     &kp N9     &kp N0         &kp MINUS
+                &kp TAB         &kp Q       &kp W   &kp E     &kp R    &kp T         &kp Y     &kp U   &kp I      &kp O      &kp P          &kp BSLH
+                &mtb LSHFT BSPC &kp A       &kp S   &kp D     &kp F    &kp G         &kp H     &kp J   &kp K      &kp L      &kp SEMI       &mtb RSHFT SQT
+                &kp LCTRL       &mtb LALT Z &kp X   &kp C     &kp V    &kp B         &kp N     &kp M   &kp COMMA  &kp DOT    &mtb RALT FSLH &kp RCTRL
+                &kp C_MUTE                  &kp LGUI &mo NAV  &kp SPACE &kp TAB      &kp BSPC  &kp RET &mo SYM    &caps_word                &kp DEL
             >;
 
-            // Encoder rotation: CW = brightness up, CCW = brightness down.
-            // Push = RGB_TOG (already in the matrix above).
-            sensor-bindings = <&inc_dec_rgb RGB_BRI_CMD RGB_BRD_CMD &inc_dec_rgb RGB_BRI_CMD RGB_BRD_CMD>;
+            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp RIGHT LEFT>;
         };
 
         nav_layer {
@@ -74,22 +92,22 @@
                 &trans    &trans     &kp C_VOL_DN &kp C_VOL_UP &kp C_MUTE &trans        &kp PG_UP &kp HOME        &kp UP      &kp END    &trans    &trans
                 &trans    &kp C_PREV &kp C_NEXT   &kp C_STOP   &kp C_PP   &trans        &kp PG_DN &kp LEFT        &kp DOWN    &kp RIGHT  &trans    &trans
                 &trans    &trans     &trans       &trans       &trans     &trans        &trans    &kp LC(LS(TAB)) &kp LC(TAB) &trans     &trans    &trans
-                &trans              &trans    &trans    &trans    &trans        &trans    &trans    &trans     &trans    &trans
+                &trans               &trans       &trans       &trans     &trans        &trans    &trans          &trans      &trans               &trans
             >;
 
-            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN &inc_dec_kp C_VOL_UP C_VOL_DN>;
+            sensor-bindings = <&inc_dec_kp PG_DN PG_UP &inc_dec_kp DOWN UP>;
         };
 
         sym_layer {
             bindings = <
                 &trans    &kp F1     &kp F2    &kp F3    &kp F4    &kp F5        &kp F6    &kp F7    &kp F8    &kp F9     &kp F10   &kp F11
                 &kp GRAVE &kp EXCL   &kp AT    &kp HASH  &kp DLLR  &kp PRCNT     &kp N7    &kp N8    &kp N9    &kp MINUS  &kp FSLH  &kp F12
-                &trans    &kp CARET  &kp AMPS  &kp ASTRK &kp LPAR  &kp RPAR      &kp N4    &kp N5    &kp N6    &kp PLUS   &kp ASTRK &kp BSPC
+                &trans    &kp CARET  &kp AMPS  &kp ASTRK &kp LPAR  &kp RPAR      &kp N4    &kp N5    &kp N6    &kp PLUS   &kp ASTRK &kp UNDER
                 &trans    &kp TILDE  &kp LBKT  &kp RBKT  &kp LBRC  &kp RBRC      &kp N1    &kp N2    &kp N3    &kp DOT    &kp EQUAL &kp RET
-                &trans              &trans    &trans    &trans    &trans        &trans    &kp N0    &trans     &trans    &trans
+                &trans               &trans    &trans    &trans    &trans        &trans    &kp N0    &trans    &trans               &trans
             >;
 
-            sensor-bindings = <&inc_dec_kp PG_UP PG_DN &inc_dec_kp PG_UP PG_DN>;
+            sensor-bindings = <&inc_dec_kp C_NEXT C_PREV &inc_dec_kp C_BRI_UP C_BRI_DN>;
         };
 
         adjust_layer {
@@ -98,10 +116,10 @@
                 &rgb_ug RGB_TOG &rgb_ug RGB_EFF &rgb_ug RGB_EFR &rgb_ug RGB_HUI &rgb_ug RGB_HUD &rgb_ug RGB_BRI      &rgb_ug RGB_BRD &rgb_ug RGB_SAI &rgb_ug RGB_SAD &rgb_ug RGB_SPI &rgb_ug RGB_SPD &trans
                 &trans          &trans          &trans          &trans          &trans          &trans               &trans          &trans          &trans          &trans          &trans          &trans
                 &bootloader     &sys_reset      &trans          &trans          &trans          &trans               &trans          &trans          &trans          &trans          &sys_reset      &bootloader
-                &rgb_ug RGB_TOG                 &trans          &trans          &trans          &trans               &trans          &trans          &trans          &trans          &rgb_ug RGB_TOG
+                &rgb_ug RGB_TOG                 &trans          &trans          &trans          &trans               &trans          &trans          &trans          &trans                          &rgb_ug RGB_TOG
             >;
 
-            sensor-bindings = <&inc_dec_kp C_BRI_UP C_BRI_DN &inc_dec_kp C_BRI_UP C_BRI_DN>;
+            sensor-bindings = <&inc_dec_rgb RGB_BRI_CMD RGB_BRD_CMD &inc_dec_rgb RGB_HUI_CMD RGB_HUD_CMD>;
         };
     };
 };
