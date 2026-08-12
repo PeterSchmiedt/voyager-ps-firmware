@@ -1,11 +1,22 @@
 manifest:
   defaults:
-    revision: main
+    # Pinned, not floating on main. zephyr/CMakeLists.txt string-matches
+    # app/src/rgb_underglow.c, so an upstream refactor of set_hsb() would break
+    # the build on an unrelated push — and a floating revision means the
+    # firmware on the keyboard cannot be rebuilt from source.
+    #
+    # This is the tree behind the green build of 2026-07-28, i.e. exactly what
+    # is flashed today. `import: app/west.yml` below resolves from this commit,
+    # so Zephyr and every module are pinned transitively.
+    #
+    # To step forward, as its own commit and its own flash-and-test cycle:
+    #   gh api repos/zmkfirmware/zmk/commits/main --jq .sha
+    #   gh api "repos/zmkfirmware/zmk/compare/<old>...<new>" --jq '.files[].filename' | grep '^app/'
+    # If that touches app/src/rgb_underglow.c, re-read set_hsb() before bumping.
+    revision: faaf39d9f59cd2a27eca3739cdd9eb197654299b
   remotes:
     - name: zmkfirmware
       url-base: https://github.com/zmkfirmware
-    # Additional modules containing boards/shields/custom code can be listed here as well
-    # See https://docs.zephyrproject.org/3.2.0/develop/west/manifest.html#projects
   projects:
     - name: zmk
       remote: zmkfirmware
