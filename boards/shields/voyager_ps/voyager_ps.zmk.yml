@@ -1,4 +1,3 @@
-# This file was generated from a template. Edit it to match your keyboard.
 # See https://zmk.dev/docs/development/hardware-integration/hardware-metadata-files
 # for instructions.
 
@@ -7,16 +6,20 @@ id: voyager_ps
 name: voyager-ps
 type: shield
 
-# Set this to a URL that documents the keyboard.
-url: https://example.com
+url: https://github.com/PeterSchmiedt/voyager-ps-firmware
 
-# Add any features your keyboard supports here.
 # See https://zmk.dev/docs/development/hardware-integration/hardware-metadata-files#features
+#
+# No "studio": ZMK Studio is deliberately not supported. CONFIG_ZMK_STUDIO
+# selects ZMK_KEYMAP_SETTINGS_STORAGE, which moves the keymap out of flash into
+# an NVS-backed copy — the devicetree keymap here stops being authoritative, and
+# recovering from a bad Studio write means flashing settings_reset, losing the
+# BLE profiles and saved RGB state with it. The keymap is version-controlled
+# with a five-minute CI turnaround, so live editing is not worth that.
 features:
   - keys
   - encoder
   - underglow
-  - studio  # Remove this line if your keyboard will not support ZMK Studio
 
 requires:
   - pro_micro
