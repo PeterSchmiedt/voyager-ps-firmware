@@ -4,3 +4,20 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   build:
     uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@main
+
+  # The two per-half .conf files must stay byte-identical: Zephyr reads
+  # ${SHIELD_DIR}/${shield}.conf for each requested shield, and the requested
+  # names are voyager_ps_left / voyager_ps_right, so a setting added to only one
+  # half silently applies to only that half. A third shared voyager_ps.conf was
+  # deleted precisely because Zephyr never read it and it drifted, which left
+  # the invariant documented but unenforced. Separate job, so it cannot affect
+  # the build.
+  check-conf-parity:
+    runs-on: ubuntu-latest
+    name: Check left/right conf parity
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare left and right shield configs
+        run: |
+          cmp boards/shields/voyager_ps/voyager_ps_left.conf \
+              boards/shields/voyager_ps/voyager_ps_right.conf
